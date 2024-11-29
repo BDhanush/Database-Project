@@ -235,7 +235,20 @@ def createCustomer():
         "message": "Customer created successfully"
     }), 201
 
+@app.route("/kitchenQueue", methods=["GET"])
+@cross_origin()
+def kitchenQueue():
 
+    cursor = connection.cursor(dictionary=True)
+
+    try:
+        cursor.execute('SELECT order_id, table_id, menu_item_id, quantity, special_instructions, stat FROM OrderItem JOIN FoodOrder USING(order_id) WHERE stat != %s',('SERVED',))
+        queue = cursor.fetchall()
+        return jsonify(queue)
+    except Exception as err:
+        return jsonify({"error": f"Database error: {err}"}), 500
+    finally:
+        cursor.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
