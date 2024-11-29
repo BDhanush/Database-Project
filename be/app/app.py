@@ -157,6 +157,21 @@ def getCategories():
     
     return jsonify(categories)
 
+@app.route("/ingredients", methods=["GET"])
+@cross_origin()
+def getIngredients():
+    menu_item_id = request.args.get("menu_item_id")
+    cursor = connection.cursor(dictionary=True)
+
+    try:
+        cursor.execute('SELECT ingredient_name, quantity FROM Ingredient WHERE menu_item_id = %s', (menu_item_id,))
+        ingredients = cursor.fetchall()
+        return jsonify(ingredients)
+    except Exception as err:
+        return jsonify({"error": f"Database error: {err}"}), 500
+    finally:
+        cursor.close()
+
 @app.route("/menu/sorted/", methods=["GET"])
 @cross_origin()
 def getMenuSorted():
