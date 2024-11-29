@@ -270,5 +270,32 @@ def changeOrderStat():
     finally:
         cursor.close()
 
+@app.route("/ingredients/<int:menu_item_id>", methods=["GET"])
+@cross_origin()
+def get_ingredients(menu_item_id):
+    cursor = connection.cursor(dictionary=True)
+    try:
+        cursor.execute('SELECT ingredient_name, quantity FROM Ingredient WHERE menu_item_id = %s', (menu_item_id,))
+        ingredients = cursor.fetchall()
+        cursor.close()
+        return jsonify(ingredients)
+    except Exception as err:
+        cursor.close()
+        return jsonify({"error": f"Database error: {err}"}), 500
+    
+@app.route("/categories", methods=["GET"])
+@cross_origin()
+def get_categories():
+    cursor = connection.cursor(dictionary=True)
+    try:
+        # Query to get unique categories
+        cursor.execute('SELECT DISTINCT category FROM MenuItem')
+        categories = [row['category'] for row in cursor.fetchall()]
+        return jsonify(categories)
+    except Exception as e:
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
