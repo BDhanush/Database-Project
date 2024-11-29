@@ -213,6 +213,19 @@ def createCustomer():
         "message": "Customer created successfully"
     }), 201
 
+@app.route("/ingredients/<int:menu_item_id>", methods=["GET"])
+@cross_origin()
+def get_ingredients(menu_item_id):
+    cursor = connection.cursor(dictionary=True)
+    try:
+        cursor.execute('SELECT ingredient_name, quantity FROM Ingredient WHERE menu_item_id = %s', (menu_item_id,))
+        ingredients = cursor.fetchall()
+        cursor.close()
+        return jsonify(ingredients)
+    except Exception as err:
+        cursor.close()
+        return jsonify({"error": f"Database error: {err}"}), 500
+
 
 
 if __name__ == '__main__':
