@@ -225,6 +225,22 @@ def get_ingredients(menu_item_id):
     except Exception as err:
         cursor.close()
         return jsonify({"error": f"Database error: {err}"}), 500
+    
+@app.route("/categories", methods=["GET"])
+@cross_origin()
+def get_categories():
+    cursor = connection.cursor(dictionary=True)
+    try:
+        # Query to get unique categories
+        cursor.execute('SELECT DISTINCT category FROM MenuItem')
+        categories = [row['category'] for row in cursor.fetchall()]
+        return jsonify(categories)
+    except Exception as e:
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+
+
 
 
 
