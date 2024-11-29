@@ -55,6 +55,18 @@ h2 {
   text-align: center;
 }
 
+.menu-item h3 {
+  margin-top: 0;
+}
+
+.menu-item p {
+  margin: 0.5rem 0;
+}
+
+.menu-item button {
+  margin-top: 0.5rem;
+}
+
 .quantity-controls {
   display: flex;
   align-items: center;
@@ -74,4 +86,24 @@ h2 {
 .quantity-controls span {
   min-width: 2rem;
   text-align: center;
+}
+
+/* Styles for the ingredients list */
+.ingredients-list {
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.ingredients-list h4 {
+  margin-bottom: 0.5rem;
+}
+
+.ingredients-list ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0; /* Remove default margin */
+}
+
+.ingredients-list li {
+  margin-bottom: 0.25rem;
 }
