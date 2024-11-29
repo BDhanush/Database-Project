@@ -250,5 +250,25 @@ def kitchenQueue():
     finally:
         cursor.close()
 
+@app.route("/changeOrderStatus", methods=["POST"])
+@cross_origin()
+def changeOrderStat():
+    
+    data = request.get_json()
+
+    order_id = data.get("order_id")
+    menu_item_id = data.get("menu_item_id")
+    stat = data.get("stat")
+
+    cursor = connection.cursor(dictionary=True)
+
+    try:
+        cursor.execute('UPDATE OrderItem SET stat = %s WHERE order_id = %d AND menu_item_id = %d',(stat,order_id,menu_item_id,))
+        return jsonify({"message":f"order_id: {order_id}, menu_item_id: {menu_item_id} status updated"})
+    except Exception as err:
+        return jsonify({"error": f"Database error: {err}"}), 500
+    finally:
+        cursor.close()
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
