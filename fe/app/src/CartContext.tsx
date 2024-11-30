@@ -7,6 +7,7 @@ interface CartItem {
   description?: string;
   category: string;
   quantity: number;
+  special_instructions?: string | null;
 }
 
 interface CartContextProps {
@@ -15,6 +16,7 @@ interface CartContextProps {
   removeFromCart: (menuItemId: number) => void;
   clearCart: () => void;
   updateCartItemQuantity: (menuItemId: number, quantity: number) => void;
+  updateSpecialInstructions: (menuItemId: number, instructions: string) => void; 
 }
 
 interface CartProviderProps {
@@ -48,6 +50,14 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     });
   };
 
+  const updateSpecialInstructions = (menuItemId: number, instructions: string) => {
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item.menu_item_id === menuItemId ? { ...item, special_instructions: instructions } : item
+      )
+    );
+  };
+
   const removeFromCart = (menuItemId: number) => {
     setCart(prevCart => prevCart.filter(item => item.menu_item_id !== menuItemId));
   };
@@ -65,7 +75,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateCartItemQuantity }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, updateCartItemQuantity, updateSpecialInstructions, }}>
       {children}
     </CartContext.Provider>
   );

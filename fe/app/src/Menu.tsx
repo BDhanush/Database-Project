@@ -22,7 +22,10 @@ const Menu: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('All');
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [popupTitle, setPopupTitle] = useState('');
+  const [categories, setCategories] = useState<string[]>(['All']); // Initial 'All' category
   const { cart, addToCart, updateCartItemQuantity } = useCart();
 
   const [ingredientsData, setIngredientsData] = useState<{ [key: number]: Ingredient[] }>({});
@@ -42,22 +45,19 @@ const Menu: React.FC = () => {
         setIsLoadingMenu(false);
       }
     };
-    fetchMenuItems();
-  }, []);
 
-  // Fetch categories dynamically
-  useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get<string[]>(`${baseURL}/categories`);
-        setCategories(['All', ...response.data]); // Add 'All' as the default option
+        const response = await axios.get<{ category: string }[]>(`${baseURL}/categories`);
+        const categoryNames = response.data.map((cat) => cat.category); // Extract category names
+        setCategories(['All', ...categoryNames]); // Add "All" at the beginning
       } catch (error) {
         console.error('Error fetching categories:', error);
-      } finally {
-        setIsLoadingCategories(false);
       }
     };
+
     fetchCategories();
+    fetchMenuItems();
   }, []);
 
   const filteredItems = menuItems.filter((item: MenuItem) =>
@@ -70,83 +70,71 @@ const Menu: React.FC = () => {
     return cartItem ? cartItem.quantity : 0;
   };
 
-  const toggleIngredients = async (menuItemId: number) => {
-    if (visibleIngredientIds.includes(menuItemId)) {
-      // Hide ingredients
-      setVisibleIngredientIds(visibleIngredientIds.filter(id => id !== menuItemId));
-    } else {
-      // Show ingredients
-      // Fetch ingredients if not already fetched
-      if (!ingredientsData[menuItemId]) {
-        try {
-          const response = await axios.get<Ingredient[]>(`${baseURL}/ingredients/${menuItemId}`);
-          setIngredientsData(prevData => ({ ...prevData, [menuItemId]: response.data }));
-        } catch (error) {
-          console.error('Error fetching ingredients:', error);
-        }
-      }
-      setVisibleIngredientIds([...visibleIngredientIds, menuItemId]);
+  const fetchIngredients = async (menuItemId: number, menuItemName: string) => {
+    try {
+      const response = await axios.get<Ingredient[]>(`${baseURL}/ingredients?menu_item_id=${menuItemId}`);
+      setIngredients(response.data);
+      setPopupTitle(menuItemName);
+      setPopupVisible(true);
+    } catch (error) {
+      console.error('Error fetching ingredients:', error);
     }
   };
 
   return (
     <div className="menu-container">
       <h2>Menu</h2>
+      <div className="search-filter">
+        <input
+          type="text"
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <select value={category} onChange={(e) => setCategory(e.target.value)}>
+          {categories.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+      </div>
+      <div className="menu-items">
+        {filteredItems.map(item => {
+          const quantity = getCartItemQuantity(item.menu_item_id);
+          return (
+            <div key={item.menu_item_id} className="menu-item">
+              <h3>{item.name}</h3>
+              <p>{item.description}</p>
+              <p>Price: ${item.price}</p>
+              <button onClick={() => fetchIngredients(item.menu_item_id, item.name)}>
+                View Ingredients
+              </button>
+              {quantity === 0 ? (
+                <button onClick={() => addToCart({ ...item, quantity: 1 })}>Add to Cart</button>
+              ) : (
+                <div className="quantity-controls">
+                  <button onClick={() => updateCartItemQuantity(item.menu_item_id, quantity - 1)}>-</button>
+                  <span>{quantity}</span>
+                  <button onClick={() => updateCartItemQuantity(item.menu_item_id, quantity + 1)}>+</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
-      {isLoadingCategories ? (
-        <p>Loading categories...</p>
-      ) : (
-        <div className="search-filter">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            {categories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {isLoadingMenu ? (
-        <p>Loading menu items...</p>
-      ) : (
-        <div className="menu-items">
-          {filteredItems.map(item => {
-            const quantity = getCartItemQuantity(item.menu_item_id);
-            return (
-              <div key={item.menu_item_id} className="menu-item">
-                <h3>{item.name}</h3>
-                <p>{item.description}</p>
-                <p>Price: ${item.price}</p>
-                {quantity === 0 ? (
-                  <button onClick={() => addToCart({ ...item, quantity: 1 })}>Add to Cart</button>
-                ) : (
-                  <div className="quantity-controls">
-                    <button onClick={() => updateCartItemQuantity(item.menu_item_id, quantity - 1)}>-</button>
-                    <span>{quantity}</span>
-                    <button onClick={() => updateCartItemQuantity(item.menu_item_id, quantity + 1)}>+</button>
-                  </div>
-                )}
-                <button onClick={() => toggleIngredients(item.menu_item_id)}>Ingredients</button>
-                {visibleIngredientIds.includes(item.menu_item_id) && ingredientsData[item.menu_item_id] && (
-                  <div className="ingredients-list">
-                    <h4>Ingredients:</h4>
-                    <ul>
-                      {ingredientsData[item.menu_item_id].map(ingredient => (
-                        <li key={ingredient.ingredient_name}>
-                          {ingredient.ingredient_name}: {ingredient.quantity}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      {popupVisible && (
+        <div className="popup-overlay" onClick={() => setPopupVisible(false)}>
+          <div className="popup-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Ingredients for {popupTitle}</h3>
+            <ul>
+              {ingredients.map((ingredient, index) => (
+                <li key={index}>
+                  <strong>{ingredient.ingredient_name}</strong>: {ingredient.quantity}
+                </li>
+              ))}
+            </ul>
+            <button onClick={() => setPopupVisible(false)}>Close</button>
+          </div>
         </div>
       )}
 

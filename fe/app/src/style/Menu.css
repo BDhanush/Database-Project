@@ -88,22 +88,57 @@ h2 {
   text-align: center;
 }
 
-/* Styles for the ingredients list */
-.ingredients-list {
-  margin-top: 1rem;
-  text-align: left;
+/* Popup Overlay */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
 
-.ingredients-list h4 {
-  margin-bottom: 0.5rem;
+/* Popup Content */
+.popup-content {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 350px;
+  max-width: 90%;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.ingredients-list ul {
+.popup-content h3 {
+  margin-bottom: 15px;
+  font-size: 1.5em;
+}
+
+.popup-content ul {
   list-style-type: none;
   padding: 0;
-  margin: 0; /* Remove default margin */
+  margin: 10px 0;
 }
 
-.ingredients-list li {
-  margin-bottom: 0.25rem;
+.popup-content li {
+  margin: 8px 0;
+  font-size: 1.1em;
+}
+
+.popup-content button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.popup-content button:hover {
+  background: #0056b3;
 }
