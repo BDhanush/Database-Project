@@ -23,8 +23,9 @@ const Menu: React.FC = () => {
   const [category, setCategory] = useState('All');
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [popupVisible, setPopupVisible] = useState(false); // Controls popup visibility
-  const [popupTitle, setPopupTitle] = useState(''); // Title of the popup (item name)
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [popupTitle, setPopupTitle] = useState('');
+  const [categories, setCategories] = useState<string[]>(['All']); // Initial 'All' category
   const { cart, addToCart, updateCartItemQuantity } = useCart();
 
   useEffect(() => {
@@ -36,10 +37,20 @@ const Menu: React.FC = () => {
         console.error('Error fetching menu items:', error);
       }
     };
+
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get<{ category: string }[]>(`${baseURL}/categories`);
+        const categoryNames = response.data.map((cat) => cat.category); // Extract category names
+        setCategories(['All', ...categoryNames]); // Add "All" at the beginning
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
+    fetchCategories();
     fetchMenuItems();
   }, []);
-
-  const categories = ['All', 'Vegetarian', 'Non Veg', 'Vegan', 'Halal'];
 
   const filteredItems = menuItems.filter((item: MenuItem) =>
     (category === 'All' || item.category === category) &&
@@ -51,10 +62,9 @@ const Menu: React.FC = () => {
     return cartItem ? cartItem.quantity : 0;
   };
 
-  // Fetch ingredients for a specific menu item
   const fetchIngredients = async (menuItemId: number, menuItemName: string) => {
     try {
-      const response = await axios.get<Ingredient[]>(`http://localhost:5001/ingredients?menu_item_id=${menuItemId}`);
+      const response = await axios.get<Ingredient[]>(`${baseURL}/ingredients?menu_item_id=${menuItemId}`);
       setIngredients(response.data);
       setPopupTitle(menuItemName);
       setPopupVisible(true);
@@ -87,12 +97,9 @@ const Menu: React.FC = () => {
               <h3>{item.name}</h3>
               <p>{item.description}</p>
               <p>Price: ${item.price}</p>
-
-              {/* Ingredients Button */}
               <button onClick={() => fetchIngredients(item.menu_item_id, item.name)}>
                 View Ingredients
               </button>
-
               {quantity === 0 ? (
                 <button onClick={() => addToCart({ ...item, quantity: 1 })}>Add to Cart</button>
               ) : (
@@ -107,7 +114,6 @@ const Menu: React.FC = () => {
         })}
       </div>
 
-      {/* Popup for Ingredients */}
       {popupVisible && (
         <div className="popup-overlay" onClick={() => setPopupVisible(false)}>
           <div className="popup-content" onClick={(e) => e.stopPropagation()}>

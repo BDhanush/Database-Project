@@ -106,14 +106,12 @@ def getPriceOfMenuItem(menu_item_id):
 @app.route("/createPaymentIntent", methods=["POST"])
 @cross_origin()
 def createPaymentIntent():
-    cursor = connection.cursor(dictionary=True)
     try:
         amount = 0
         
         data = request.get_json()['cart']
         access_code = request.get_json()['table_number']
         print(data,flush=True)
-        cursor = connection.cursor(dictionary=True)
         for i in data:
             menu_item_id = i.get("menu_item_id")
             quantity = i.get("quantity")
@@ -271,4 +269,4 @@ def changeOrderStat():
         cursor.close()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, threaded=True)
