@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import './style/Menu.css';
 import { useCart } from './CartContext';
-import { baseURL } from './App'
+import { baseURL } from './App';
 
 interface MenuItem {
   menu_item_id: number;
@@ -13,10 +13,18 @@ interface MenuItem {
   category: string;
 }
 
+interface Ingredient {
+  ingredient_name: string;
+  quantity: number;
+}
+
 const Menu: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('All');
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [popupVisible, setPopupVisible] = useState(false); // Controls popup visibility
+  const [popupTitle, setPopupTitle] = useState(''); // Title of the popup (item name)
   const { cart, addToCart, updateCartItemQuantity } = useCart();
 
   useEffect(() => {
@@ -29,15 +37,6 @@ const Menu: React.FC = () => {
       }
     };
     fetchMenuItems();
-    // const dummyMenuItems: MenuItem[] = [
-    //   { menu_item_id: 1, price: 10.99, name: 'Burger', description: 'A delicious burger', category: 'Main Courses' },
-    //   { menu_item_id: 2, price: 5.99, name: 'Fries', description: 'Crispy fries', category: 'Appetizers' },
-    //   { menu_item_id: 3, price: 7.99, name: 'Salad', description: 'Fresh garden salad', category: 'Appetizers' },
-    //   { menu_item_id: 4, price: 12.99, name: 'Steak', description: 'Juicy steak', category: 'Main Courses' },
-    //   { menu_item_id: 5, price: 3.99, name: 'Ice Cream', description: 'Vanilla ice cream', category: 'Desserts' },
-    //   { menu_item_id: 6, price: 2.99, name: 'Soda', description: 'Refreshing soda', category: 'Beverages' },
-    // ];
-    // setMenuItems(dummyMenuItems);
   }, []);
 
   const categories = ['All', 'Vegetarian', 'Non Veg', 'Vegan', 'Halal'];
@@ -50,6 +49,18 @@ const Menu: React.FC = () => {
   const getCartItemQuantity = (menuItemId: number) => {
     const cartItem = cart.find(item => item.menu_item_id === menuItemId);
     return cartItem ? cartItem.quantity : 0;
+  };
+
+  // Fetch ingredients for a specific menu item
+  const fetchIngredients = async (menuItemId: number, menuItemName: string) => {
+    try {
+      const response = await axios.get<Ingredient[]>(`http://localhost:5001/ingredients?menu_item_id=${menuItemId}`);
+      setIngredients(response.data);
+      setPopupTitle(menuItemName);
+      setPopupVisible(true);
+    } catch (error) {
+      console.error('Error fetching ingredients:', error);
+    }
   };
 
   return (
@@ -76,6 +87,12 @@ const Menu: React.FC = () => {
               <h3>{item.name}</h3>
               <p>{item.description}</p>
               <p>Price: ${item.price}</p>
+
+              {/* Ingredients Button */}
+              <button onClick={() => fetchIngredients(item.menu_item_id, item.name)}>
+                View Ingredients
+              </button>
+
               {quantity === 0 ? (
                 <button onClick={() => addToCart({ ...item, quantity: 1 })}>Add to Cart</button>
               ) : (
@@ -89,6 +106,24 @@ const Menu: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Popup for Ingredients */}
+      {popupVisible && (
+        <div className="popup-overlay" onClick={() => setPopupVisible(false)}>
+          <div className="popup-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Ingredients for {popupTitle}</h3>
+            <ul>
+              {ingredients.map((ingredient, index) => (
+                <li key={index}>
+                  <strong>{ingredient.ingredient_name}</strong>: {ingredient.quantity}
+                </li>
+              ))}
+            </ul>
+            <button onClick={() => setPopupVisible(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
       <Link to="/cart" className="cart-link">
         <button>Go to Cart</button>
       </Link>

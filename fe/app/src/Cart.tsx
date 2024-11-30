@@ -11,7 +11,7 @@ interface CartProps {
 }
 
 const Cart: React.FC<CartProps> = ({ tableNumber }) => {
-  const { cart, removeFromCart, clearCart } = useCart();
+  const { cart, removeFromCart, clearCart, updateSpecialInstructions } = useCart();
   const stripe = useStripe();
   const elements = useElements();
 
@@ -19,12 +19,21 @@ const Cart: React.FC<CartProps> = ({ tableNumber }) => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [showInstructions, setShowInstructions] = useState<{ [id: number]: boolean }>({});
 
   // Calculate the total amount
   const totalAmount: number = cart.reduce(
     (acc: number, item) => acc + item.price * item.quantity,
     0
   );
+
+  // Toggle visibility of instructions input
+  const toggleInstructions = (menuItemId: number) => {
+    setShowInstructions((prevState) => ({
+      ...prevState,
+      [menuItemId]: !prevState[menuItemId],
+    }));
+  };
 
   // Handle the payment process
   const handlePayment = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
@@ -36,7 +45,7 @@ const Cart: React.FC<CartProps> = ({ tableNumber }) => {
     try {
       const response = await axios.post<{ clientSecret: string }>(
         `${baseURL}/createPaymentIntent`,
-        { cart, table_number: tableNumber } 
+        { cart, table_number: tableNumber }
       );
 
       const { clientSecret } = response.data;
@@ -85,6 +94,19 @@ const Cart: React.FC<CartProps> = ({ tableNumber }) => {
                 <h3>{item.name}</h3>
                 <p>Price: ${item.price}</p>
                 <p>Quantity: {item.quantity}</p>
+                <p>Special Instructions: {item.special_instructions || 'None'}</p>
+                {showInstructions[item.menu_item_id] && (
+                  <input
+                    type="text"
+                    placeholder="Add instructions"
+                    defaultValue={item.special_instructions || ''}
+                    onBlur={(e) => updateSpecialInstructions(item.menu_item_id, e.target.value)}
+                    className="special-instructions-input"
+                  />
+                )}
+                <button onClick={() => toggleInstructions(item.menu_item_id)}>
+                  {showInstructions[item.menu_item_id] ? 'Hide' : 'Add Instructions'}
+                </button>
                 <button onClick={() => removeFromCart(item.menu_item_id)}>Remove</button>
               </div>
             ))}
