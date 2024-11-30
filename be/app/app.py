@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
 import mysql.connector
+from mysql.connector import pooling
 import os
 import stripe
 
@@ -13,6 +14,16 @@ MYSQL_USER = os.getenv('MYSQL_USER')
 MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
 MYSQL_HOST = os.getenv('MYSQL_HOST')
 MYSQL_DB = os.getenv('MYSQL_DB')
+
+pool = pooling.MySQLConnectionPool(
+    pool_name="mypool",
+    pool_size=5,
+    autocommit=True,
+    host=os.getenv('MYSQL_HOST'),
+    user=os.getenv('MYSQL_USER'),
+    password=os.getenv('MYSQL_PASSWORD'),
+    database=os.getenv('MYSQL_DB')
+)
 
 # Configure the MySQL connection
 connection = mysql.connector.connect(
@@ -67,6 +78,7 @@ def stripe_webhook():
         print("Invalid signature")
     
 def order(data,access_code,payment_reference):
+    connection = pool.get_connection()
     cursor = connection.cursor(dictionary=True)
     table_id=getTableFromCode(access_code)
     cursor.execute('INSERT INTO FoodOrder(table_id,payment_reference) Values (%d,%s)', (table_id,payment_reference,))
@@ -82,25 +94,28 @@ def order(data,access_code,payment_reference):
     intentToOrderItems.pop(payment_reference)
     intentToAccessCode.pop(payment_reference)
     cursor.close()
+    connection.close()
 
 def getTableFromCode(code):
-
+    connection = pool.get_connection()
     cursor = connection.cursor(dictionary=True)
 
     cursor.execute('SELECT table_id FROM FoodTable WHERE access_code = %s', (code,))
     tableId = cursor.fetchone()['table_id']
 
     cursor.close()
+    connection.close()
     return tableId
 
 def getPriceOfMenuItem(menu_item_id):
-
+    connection = pool.get_connection()
     cursor = connection.cursor(dictionary=True)
 
     cursor.execute('SELECT price FROM MenuItem WHERE menu_item_id = %s', (menu_item_id,))
     price = cursor.fetchone()['price']
 
     cursor.close()
+    connection.close()
     return price
 
 @app.route("/createPaymentIntent", methods=["POST"])
@@ -132,33 +147,36 @@ def createPaymentIntent():
 
     except Exception as e:
         return jsonify(error=str(e)), 500
-    finally:
-        cursor.close()
 
 @app.route("/menu/", methods=["GET"])
 @cross_origin()
 def getMenu():
+    connection = pool.get_connection()
     cursor = connection.cursor(dictionary=True)
     cursor.execute('SELECT * FROM MenuItem')  # Query the menu table
     menu_items = cursor.fetchall()
     cursor.close()
+    connection.close()
     
     return jsonify(menu_items)
 
 @app.route("/categories/", methods=["GET"])
 @cross_origin()
 def getCategories():
+    connection = pool.get_connection()
     cursor = connection.cursor(dictionary=True)
     cursor.execute('SELECT DISTINCT category FROM MenuItem')  # Query the menu table
     categories = cursor.fetchall()
     cursor.close()
+    connection.close()
     
     return jsonify(categories)
 
 @app.route("/ingredients", methods=["GET"])
 @cross_origin()
 def getIngredients():
-    menu_item_id = request.args.get("menu_item_id")
+    menu_item_id = request.args.get("menu_item_id")    
+    connection = pool.get_connection()
     cursor = connection.cursor(dictionary=True)
 
     try:
@@ -169,16 +187,19 @@ def getIngredients():
         return jsonify({"error": f"Database error: {err}"}), 500
     finally:
         cursor.close()
+        connection.close()
 
 @app.route("/menu/sorted/", methods=["GET"])
 @cross_origin()
 def getMenuSorted():
+    connection = pool.get_connection()
     cursor = connection.cursor(dictionary=True)
     
     # Query the menu table and sort items by price in ascending order
     cursor.execute('SELECT * FROM MenuItem ORDER BY price ASC')
     sorted_menu_items = cursor.fetchall()
     cursor.close()
+    connection.close()
     
     return jsonify(sorted_menu_items)
 
@@ -187,6 +208,7 @@ def getMenuSorted():
 def login():
 
     email = request.args.get("email")
+    connection = pool.get_connection()
     cursor = connection.cursor(dictionary=True)
 
     try:
@@ -205,6 +227,7 @@ def login():
         return jsonify({"error": f"Database error: {err}"}), 500
     finally:
         cursor.close()
+        connection.close()
     
 
 @app.route("/createCustomer", methods=["POST"])
@@ -217,8 +240,9 @@ def createCustomer():
     first_name = data.get("first_name")
     last_name = data.get("last_name")
     phone_number = data.get("phone_number")
-    email = data.get("email")
+    email = data.get("email")    
 
+    connection = pool.get_connection()
     cursor = connection.cursor(dictionary=True)
 
     try:
@@ -228,6 +252,7 @@ def createCustomer():
         return jsonify({"error": f"Database error: {err}"}), 500
     finally:
         cursor.close()
+        connection.close()
 
     return jsonify({
         "message": "Customer created successfully"
@@ -237,6 +262,7 @@ def createCustomer():
 @cross_origin()
 def kitchenQueue():
 
+    connection = pool.get_connection()
     cursor = connection.cursor(dictionary=True)
 
     try:
@@ -247,6 +273,7 @@ def kitchenQueue():
         return jsonify({"error": f"Database error: {err}"}), 500
     finally:
         cursor.close()
+        connection.close()
 
 @app.route("/changeOrderStatus", methods=["POST"])
 @cross_origin()
@@ -258,6 +285,7 @@ def changeOrderStat():
     menu_item_id = data.get("menu_item_id")
     stat = data.get("stat")
 
+    connection = pool.get_connection()
     cursor = connection.cursor(dictionary=True)
 
     try:
@@ -267,6 +295,7 @@ def changeOrderStat():
         return jsonify({"error": f"Database error: {err}"}), 500
     finally:
         cursor.close()
+        connection.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, threaded=True)
