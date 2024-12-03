@@ -40,6 +40,7 @@ endpoint_secret = os.getenv('ENDPOINT_SECRET')  # Secret for verifying webhook a
 
 intentToOrderItems={}
 intentToAccessCode={}
+intentToEmail={}
 
 @app.route('/webhook', methods=['POST'])
 @cross_origin()
@@ -52,47 +53,48 @@ def stripeWebhook():
         event = stripe.Webhook.construct_event(
             payload, sig_header, endpoint_secret
         )
-
         # Handle the event based on its type
         if event['type'] == 'payment_intent.succeeded':
-            # delete from database
-            payment_intent = event['data']['object']  # Contains the canceled payment intent
+            payment_intent = event['data']['object']  # Contains the payment intent
             payment_intent_id = payment_intent['id']
-            print(payment_intent_id,flush=True)
-            order(intentToOrderItems[payment_intent_id],intentToAccessCode[payment_intent_id],payment_intent_id)
+            order(intentToOrderItems[payment_intent_id], intentToAccessCode[payment_intent_id], payment_intent_id, intentToEmail[payment_intent_id])
             # You can now update your database or take appropriate action
-            # For example, set the order status to canceled
         elif event['type'] == 'payment_intent.canceled':
             payment_intent = event['data']['object']  
             payment_intent_id = payment_intent['id']
             intentToOrderItems.pop(payment_intent_id)
             intentToAccessCode.pop(payment_intent_id)
+            intentToEmail.pop(payment_intent_id)
 
+        # Return a successful response to Stripe
+        return "Webhook received and processed", 200
 
     except ValueError as e:
         # Invalid payload
-        print("Invalid payload")
+        print("Invalid payload",flush=True)
+        return "Invalid payload", 400
 
     except stripe.error.SignatureVerificationError as e:
         # Invalid signature
-        print("Invalid signature")
+        print("Invalid signature",flush=True)
+        return "Invalid signature", 400
     
-def order(data,access_code,payment_reference):
+def order(data,access_code,payment_reference,email):
     connection = pool.get_connection()
     cursor = connection.cursor(dictionary=True)
     table_id=getTableFromCode(access_code)
-    cursor.execute('INSERT INTO FoodOrder(table_id,payment_reference) Values (%d,%s)', (table_id,payment_reference,))
+    cursor.execute('INSERT INTO FoodOrder(table_id,payment_reference,email) Values (%s,%s,%s)', (table_id,payment_reference,email,))
     order_id = cursor.lastrowid
     
     for i in data:
         menu_item_id = i.get("menu_item_id")
         quantity = i.get("quantity")
         special_instructions = i.get("special_instructions")
-        email = i.get("email")
 
-        cursor.execute('INSERT INTO OrderItem(email,order_id,menu_item_id,quantity,special_instructions,stat) VALUES (%s, %d, %d, %d, %s, %s)', (email,order_id,menu_item_id,quantity,special_instructions,"TODO",))
+        cursor.execute('INSERT INTO OrderItem(order_id,menu_item_id,quantity,special_instructions,stat) VALUES (%s, %s, %s, %s, %s)', (order_id,menu_item_id,quantity,special_instructions,"TODO",))
     intentToOrderItems.pop(payment_reference)
     intentToAccessCode.pop(payment_reference)
+    intentToEmail.pop(payment_reference)
     cursor.close()
     connection.close()
 
@@ -126,6 +128,7 @@ def createPaymentIntent():
         
         data = request.get_json()['cart']
         access_code = request.get_json()['table_number']
+        email = request.get_json()['email']
         print(data,access_code,flush=True)
         for i in data:
             menu_item_id = i.get("menu_item_id")
@@ -140,6 +143,7 @@ def createPaymentIntent():
 
         intentToOrderItems[payment_intent.id]=data
         intentToAccessCode[payment_intent.id]=access_code
+        intentToEmail[payment_intent.id]=email
         # Send back the client secret to the frontend
         return jsonify({
             'clientSecret': payment_intent.client_secret
@@ -289,7 +293,7 @@ def changeOrderStat():
     cursor = connection.cursor(dictionary=True)
 
     try:
-        cursor.execute('UPDATE OrderItem SET stat = %s WHERE order_id = %d AND menu_item_id = %d',(stat,order_id,menu_item_id,))
+        cursor.execute('UPDATE OrderItem SET stat = %s WHERE order_id = %s AND menu_item_id = %s',(stat,order_id,menu_item_id,))
         return jsonify({"message":f"order_id: {order_id}, menu_item_id: {menu_item_id} status updated"})
     except Exception as err:
         return jsonify({"error": f"Database error: {err}"}), 500

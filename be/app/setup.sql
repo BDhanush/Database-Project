@@ -30,8 +30,8 @@ CREATE TABLE Ingredient (
 CREATE TABLE FoodOrder (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     table_id INT REFERENCES FoodTable(table_id),
-    payment_reference varchar(4) NOT NULL,
-    email varchar(60) REFERENCES Customer(email)
+    payment_reference varchar(255) NOT NULL,
+    email varchar(60) NOT NULL REFERENCES Customer(email) 
     
 );
 

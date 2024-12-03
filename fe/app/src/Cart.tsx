@@ -7,10 +7,11 @@ import './style/Cart.css';
 import { baseURL } from './App';
 
 interface CartProps {
+  isAuthenticated: string;
   tableNumber: number;
 }
 
-const Cart: React.FC<CartProps> = ({ tableNumber }) => {
+const Cart: React.FC<CartProps> = ({ isAuthenticated,tableNumber }) => {
   const { cart, removeFromCart, clearCart, updateSpecialInstructions } = useCart();
   const stripe = useStripe();
   const elements = useElements();
@@ -45,7 +46,7 @@ const Cart: React.FC<CartProps> = ({ tableNumber }) => {
     try {
       const response = await axios.post<{ clientSecret: string }>(
         `${baseURL}/createPaymentIntent`,
-        { cart, table_number: tableNumber }
+        { cart, table_number: tableNumber, email:isAuthenticated }
       );
 
       const { clientSecret } = response.data;
