@@ -43,7 +43,7 @@ intentToAccessCode={}
 
 @app.route('/webhook', methods=['POST'])
 @cross_origin()
-def stripe_webhook():
+def stripeWebhook():
     payload = request.get_data(as_text=True)
     sig_header = request.headers.get('Stripe-Signature')
 
@@ -126,7 +126,7 @@ def createPaymentIntent():
         
         data = request.get_json()['cart']
         access_code = request.get_json()['table_number']
-        print(data,flush=True)
+        print(data,access_code,flush=True)
         for i in data:
             menu_item_id = i.get("menu_item_id")
             quantity = i.get("quantity")

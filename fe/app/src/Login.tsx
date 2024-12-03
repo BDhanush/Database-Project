@@ -22,7 +22,7 @@ const Login: React.FC<LoginProps> = ({ setAuthenticatedEmail, setTableNumber }) 
     const tableNumber = new URLSearchParams(location.search).get('tableNumber');
     if (tableNumber) {
       setTableNumber(Number(tableNumber));
-      navigate('/login', { replace: true });
+      // navigate('/login', { replace: true });
     } else {
       setTableNumber(0);
     }
