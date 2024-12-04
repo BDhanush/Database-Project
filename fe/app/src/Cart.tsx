@@ -23,10 +23,9 @@ const Cart: React.FC<CartProps> = ({ isAuthenticated,tableNumber }) => {
   const [showInstructions, setShowInstructions] = useState<{ [id: number]: boolean }>({});
 
   // Calculate the total amount
-  const totalAmount: number = cart.reduce(
+  const totalAmount: number = parseFloat(cart.reduce(
     (acc: number, item) => acc + item.price * item.quantity,
-    0
-  );
+    0).toFixed(2));
 
   // Toggle visibility of instructions input
   const toggleInstructions = (menuItemId: number) => {
